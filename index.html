@@ -199,15 +199,26 @@
         </div>
       </div>
 
-      <div class="row2">
-        <div class="field">
-          <label for="oilcost">Oil Change Price ($)</label>
-          <input type="number" id="oilcost" min="0" step="0.01" placeholder="69.95" required>
+      <div class="field">
+        <label>Coupon Type</label>
+        <div class="radio-row" id="coupon-type-row">
+          <label class="opt"><input type="radio" name="ctype-coupon" value="fixed_amount"> Fixed Amount</label>
+          <label class="opt"><input type="radio" name="ctype-coupon" value="percentage"> Percentage Off</label>
+          <label class="opt"><input type="radio" name="ctype-coupon" value="flat_price"> Flat Price</label>
         </div>
-        <div class="field">
-          <label for="couponamt">Coupon Amount ($)</label>
-          <input type="number" id="couponamt" min="0" step="0.01" placeholder="20.00" required>
-        </div>
+      </div>
+
+      <div class="field" id="coupon-field-fixed_amount" style="display:none;">
+        <label for="couponamt">Discount Amount ($) <span style="text-transform:none; font-weight:400; color:var(--text-faint);">— e.g. $10 off</span></label>
+        <input type="number" id="couponamt" min="0" step="0.01" placeholder="10.00">
+      </div>
+      <div class="field" id="coupon-field-percentage" style="display:none;">
+        <label for="couponpct">Percentage Off (%) <span style="text-transform:none; font-weight:400; color:var(--text-faint);">— e.g. 10% off</span></label>
+        <input type="number" id="couponpct" min="0" max="100" step="0.1" placeholder="10">
+      </div>
+      <div class="field" id="coupon-field-flat_price" style="display:none;">
+        <label for="flatprice">Oil Change Price ($) <span style="text-transform:none; font-weight:400; color:var(--text-faint);">— the flat price this coupon covers, e.g. an $85.49 oil change</span></label>
+        <input type="number" id="flatprice" min="0" step="0.01" placeholder="85.49">
       </div>
 
       <div class="field">
@@ -268,6 +279,19 @@
     });
   });
 
+  // ---------- coupon type ----------
+  const couponFields = { fixed_amount: 'coupon-field-fixed_amount', percentage: 'coupon-field-percentage', flat_price: 'coupon-field-flat_price' };
+
+  document.querySelectorAll('#coupon-type-row .opt').forEach(lbl=>{
+    const radio = lbl.querySelector('input');
+    radio.addEventListener('change', ()=>{
+      document.querySelectorAll('#coupon-type-row .opt').forEach(l=>l.classList.remove('checked'));
+      lbl.classList.add('checked');
+      Object.values(couponFields).forEach(id => document.getElementById(id).style.display = 'none');
+      document.getElementById(couponFields[radio.value]).style.display = 'block';
+    });
+  });
+
   document.getElementById('intake-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const errBox = document.getElementById('form-error');
@@ -277,14 +301,34 @@
     if(program === '__other') program = programOtherInput.value.trim();
     const ro = document.getElementById('ro').value.trim();
     const ctypeEl = document.querySelector('#customer-type-row input:checked');
-    const oilcost = document.getElementById('oilcost').value;
-    const couponamt = document.getElementById('couponamt').value;
     const advisor = document.getElementById('advisor').value.trim();
+    const couponTypeEl = document.querySelector('#coupon-type-row input:checked');
 
-    if(!program || !ro || !ctypeEl || oilcost==='' || couponamt===''){
+    if(!program || !ro || !ctypeEl || !couponTypeEl){
       errBox.textContent = 'Please fill in every field before submitting.';
       errBox.classList.add('show');
       return;
+    }
+
+    const payload = {
+      program,
+      customerType: ctypeEl.value,
+      roNumber: ro,
+      couponType: couponTypeEl.value,
+      advisorName: advisor || null,
+    };
+    if(couponTypeEl.value === 'fixed_amount'){
+      const v = document.getElementById('couponamt').value;
+      if(v === ''){ errBox.textContent = 'Enter the discount amount.'; errBox.classList.add('show'); return; }
+      payload.couponAmount = Number(v);
+    } else if(couponTypeEl.value === 'percentage'){
+      const v = document.getElementById('couponpct').value;
+      if(v === ''){ errBox.textContent = 'Enter the percentage off.'; errBox.classList.add('show'); return; }
+      payload.couponPercent = Number(v);
+    } else if(couponTypeEl.value === 'flat_price'){
+      const v = document.getElementById('flatprice').value;
+      if(v === ''){ errBox.textContent = 'Enter the flat price.'; errBox.classList.add('show'); return; }
+      payload.flatPrice = Number(v);
     }
 
     const btn = document.getElementById('submit-btn');
@@ -295,14 +339,7 @@
       const res = await fetch(`${API_BASE}/api/submissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          program,
-          customerType: ctypeEl.value,
-          roNumber: ro,
-          oilChangeCost: Number(oilcost),
-          couponAmount: Number(couponamt),
-          advisorName: advisor || null,
-        }),
+        body: JSON.stringify(payload),
       });
       if(!res.ok) throw new Error('Request failed');
       const data = await res.json();
@@ -323,6 +360,8 @@
   document.getElementById('new-submission-btn').addEventListener('click', ()=>{
     document.getElementById('intake-form').reset();
     document.querySelectorAll('#customer-type-row .opt').forEach(l=>l.classList.remove('checked'));
+    document.querySelectorAll('#coupon-type-row .opt').forEach(l=>l.classList.remove('checked'));
+    Object.values(couponFields).forEach(id => document.getElementById(id).style.display = 'none');
     document.getElementById('program-other').style.display = 'none';
     document.getElementById('stub-card').style.display = 'none';
     document.getElementById('form-card').style.display = 'block';
