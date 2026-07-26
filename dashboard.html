@@ -615,6 +615,14 @@
     });
   }
 
+  function couponTypeLabel(s){
+    if(s.coupon_type === 'percentage') return `${s.coupon_percent}% off`;
+    if(s.coupon_type === 'flat_price') return `Flat ${money(s.flat_price)}`;
+    if(s.coupon_type === 'fixed_amount') return `${money(s.coupon_amount)} off`;
+    return '—';
+  }
+  function moneyOrDash(n){ return (n === null || n === undefined) ? '—' : money(n); }
+
   function renderSubmissionsList(filtered){
     const wrap = document.getElementById('submissions-list');
     if(filtered.length === 0){
@@ -624,7 +632,7 @@
     wrap.innerHTML = `<table>
       <thead><tr>
         <th>Date</th><th>RO#</th><th>Program</th><th>Cust.</th><th>Advisor</th>
-        <th>Oil Price</th><th>Discount</th><th>Auth #</th><th>Status</th><th></th>
+        <th>Coupon</th><th>Discount</th><th>Auth #</th><th>Status</th><th></th>
       </tr></thead>
       <tbody>
         ${filtered.map(s=>{
@@ -636,8 +644,8 @@
             <td>${s.program}</td>
             <td>${s.customer_type==='new'?'New':'Returning'}</td>
             <td>${s.advisor_name||'—'}</td>
-            <td class="mono">${money(s.oil_change_cost)}</td>
-            <td class="mono">${money(s.coupon_amount)}</td>
+            <td class="mono">${couponTypeLabel(s)}</td>
+            <td class="mono">${moneyOrDash(s.coupon_amount)}</td>
             <td class="mono">${s.auth_number}</td>
             <td>${s.reviewed ? `<span class="pill pill-good">Reviewed</span>` : `<span class="pill pill-warn">Needs Review</span>`}${s.reviewed && s.transaction_type==='upsell' ? ` <span class="pill pill-up">Upsell</span>` : ''}</td>
             <td><button class="btn btn-ghost review-btn" data-id="${s.id}" style="padding:6px 12px; font-size:11.5px;">${s.reviewed?'Edit':'Review'}</button></td>
@@ -663,6 +671,8 @@
     row.style.display = 'table-row';
     cell.innerHTML = `
       <div class="review-panel">
+        <div class="full" style="color:var(--text-muted); font-size:12.5px;">Coupon logged as: <strong style="color:var(--text);">${couponTypeLabel(s)}</strong> — confirm the actual dollar discount against the RO below.</div>
+        <div><label>Discount Given ($)</label><input type="number" step="0.01" min="0" id="rev-discount-${id}" value="${s.coupon_amount ?? ''}" placeholder="From RO"></div>
         <div><label>Actual RO Total ($)</label><input type="number" step="0.01" min="0" id="rev-rototal-${id}" value="${s.ro_total ?? ''}" placeholder="From DMS"></div>
         <div><label>Gross Profit ($)</label><input type="number" step="0.01" min="0" id="rev-gp-${id}" value="${s.gross_profit ?? ''}" placeholder="From DMS"></div>
         <div><label>Transaction Type</label>
@@ -686,6 +696,7 @@
     `;
     document.getElementById(`rev-save-${id}`).addEventListener('click', async ()=>{
       const patch = {
+        couponAmount: document.getElementById(`rev-discount-${id}`).value === '' ? null : Number(document.getElementById(`rev-discount-${id}`).value),
         roTotal: document.getElementById(`rev-rototal-${id}`).value === '' ? null : Number(document.getElementById(`rev-rototal-${id}`).value),
         grossProfit: document.getElementById(`rev-gp-${id}`).value === '' ? null : Number(document.getElementById(`rev-gp-${id}`).value),
         transactionType: document.getElementById(`rev-ttype-${id}`).value,
@@ -830,10 +841,10 @@
 
   document.getElementById('export-csv').addEventListener('click', ()=>{
     const filtered = getSubmissionsFiltered();
-    const headers = ['Date','RO Number','Program','Customer Type','Advisor','Oil Change Price','Coupon Amount','Auth Number','Reviewed','RO Total','Gross Profit','Transaction Type','Notes'];
+    const headers = ['Date','RO Number','Program','Customer Type','Advisor','Oil Change Price','Coupon Type','Coupon Percent','Flat Price','Coupon Amount','Auth Number','Reviewed','RO Total','Gross Profit','Transaction Type','Notes'];
     const rows = filtered.map(s=>[
       s.created_at, s.ro_number, s.program, s.customer_type, s.advisor_name||'',
-      s.oil_change_cost, s.coupon_amount, s.auth_number, s.reviewed?'Yes':'No',
+      s.oil_change_cost, s.coupon_type||'', s.coupon_percent??'', s.flat_price??'', s.coupon_amount, s.auth_number, s.reviewed?'Yes':'No',
       s.ro_total??'', s.gross_profit??'', s.transaction_type||'', (s.notes||'').replace(/,/g,';')
     ]);
     const csv = [headers.join(','), ...rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
