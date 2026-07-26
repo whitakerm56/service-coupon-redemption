@@ -307,6 +307,19 @@
         </div>
 
         <div class="card">
+          <div class="card-title">Redemptions by Advisor <span class="hint">flags anyone claiming well more coupons than their peers, for the selected month(s)</span></div>
+          <div style="overflow-x:auto;">
+            <table id="advisor-table">
+              <thead><tr>
+                <th>Advisor</th><th>Redemptions</th><th>Share of Total</th><th>New / Ret.</th>
+                <th>Upsell Rate</th><th>Discount Given</th><th>Gross Profit</th><th></th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">Charts</div>
           <div class="charts-row">
             <canvas id="chart-redemptions"></canvas>
@@ -330,6 +343,18 @@
           <div id="program-list"></div>
           <p style="font-size:12px; color:var(--text-faint); margin-top:14px; line-height:1.5;">
             Renaming updates every past submission and expense filed under the old name, so history stays grouped correctly. Deleting only takes a program out of the advisor dropdown going forward — it won't change or hide anything already logged.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Advisors <span class="hint">who can be selected as the service advisor on the intake page</span></div>
+          <form id="advisor-form" style="display:flex; gap:14px; align-items:end; margin-bottom:16px;">
+            <div style="flex:1;"><label>New Advisor Name</label><input type="text" id="advisor-name-input" placeholder="e.g. Johnny Ray"></div>
+            <div><button type="submit" class="btn btn-primary">Add Advisor</button></div>
+          </form>
+          <div id="advisor-list"></div>
+          <p style="font-size:12px; color:var(--text-faint); margin-top:14px; line-height:1.5;">
+            Renaming updates every past submission filed under the old name, so history stays grouped correctly. Deleting only takes someone out of the intake dropdown going forward — it won't change or hide anything already logged.
           </p>
         </div>
 
@@ -373,7 +398,9 @@
   let submissions = [];
   let expenses = [];
   let programs = []; // [{id, name}] — the managed list from Settings
+  let advisors = []; // [{id, name}] — the managed list from Settings
   let knownPrograms = new Set(); // union of managed programs + any legacy names in historical data
+  let knownAdvisors = new Set(); // union of managed advisors + any legacy names in historical data
   let chartRedemptions, chartProfit;
 
   // No password layer right now — see Settings tab. When IP restriction is
@@ -404,17 +431,23 @@
   // ---------- data ----------
   async function loadAll(){
     try{
-      const [subRes, expRes, progRes] = await Promise.all([
+      const [subRes, expRes, progRes, advRes] = await Promise.all([
         fetch(`${API_BASE}/api/manager/submissions`, { headers: apiHeaders() }),
         fetch(`${API_BASE}/api/manager/expenses`, { headers: apiHeaders() }),
         fetch(`${API_BASE}/api/programs`, { headers: apiHeaders() }),
+        fetch(`${API_BASE}/api/advisors`, { headers: apiHeaders() }),
       ]);
-      if(!subRes.ok || !expRes.ok || !progRes.ok) return false;
+      if(!subRes.ok || !expRes.ok || !progRes.ok || !advRes.ok) return false;
       submissions = await subRes.json();
       expenses = await expRes.json();
       programs = await progRes.json();
+      advisors = await advRes.json();
       knownPrograms = new Set(programs.map(p=>p.name));
-      submissions.forEach(s=>{ if(s.program) knownPrograms.add(s.program); });
+      knownAdvisors = new Set(advisors.map(a=>a.name));
+      submissions.forEach(s=>{
+        if(s.program) knownPrograms.add(s.program);
+        if(s.advisor_name) knownAdvisors.add(s.advisor_name);
+      });
       expenses.forEach(e=>{ if(e.program) knownPrograms.add(e.program); });
       renderAll();
       return true;
@@ -445,6 +478,33 @@
   }
   async function deleteProgram(id){
     const res = await fetch(`${API_BASE}/api/manager/programs/${id}`, {
+      method: 'DELETE', headers: apiHeaders()
+    });
+    if(!res.ok) throw new Error('delete failed');
+  }
+
+  async function addAdvisor(name){
+    const res = await fetch(`${API_BASE}/api/manager/advisors`, {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ name })
+    });
+    if(!res.ok){
+      const body = await res.json().catch(()=>({}));
+      throw new Error(body.error || 'add failed');
+    }
+    return res.json();
+  }
+  async function renameAdvisor(id, name, oldName){
+    const res = await fetch(`${API_BASE}/api/manager/advisors/${id}`, {
+      method: 'PATCH', headers: apiHeaders(), body: JSON.stringify({ name, oldName })
+    });
+    if(!res.ok){
+      const body = await res.json().catch(()=>({}));
+      throw new Error(body.error || 'rename failed');
+    }
+    return res.json();
+  }
+  async function deleteAdvisor(id){
+    const res = await fetch(`${API_BASE}/api/manager/advisors/${id}`, {
       method: 'DELETE', headers: apiHeaders()
     });
     if(!res.ok) throw new Error('delete failed');
@@ -516,8 +576,10 @@
     const sFiltered = getSubmissionsFiltered();
     renderStats(dFiltered);
     renderProgramTable(dFiltered);
+    renderAdvisorTable(dFiltered);
     renderSubmissionsList(sFiltered);
     renderProgramList();
+    renderAdvisorList();
     renderExpenseList();
     try{
       renderCharts(dFiltered);
@@ -586,6 +648,46 @@
     }).filter(Boolean);
 
     tbody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="9" class="empty-state">No submissions match these filters yet.</td></tr>`;
+  }
+
+  function renderAdvisorTable(filtered){
+    const tbody = document.querySelector('#advisor-table tbody');
+    const advisorNames = [...knownAdvisors].sort();
+    const totalRedemptions = filtered.length;
+
+    const rowData = advisorNames.map(name=>{
+      const items = filtered.filter(x=>x.advisor_name===name);
+      if(items.length===0) return null;
+      const redemptions = items.length;
+      const newCount = items.filter(x=>x.customer_type==='new').length;
+      const retCount = items.filter(x=>x.customer_type==='returning').length;
+      const reviewedItems = items.filter(x=>x.reviewed);
+      const upsells = reviewedItems.filter(x=>x.transaction_type==='upsell').length;
+      const upsellRate = reviewedItems.length ? upsells/reviewedItems.length : NaN;
+      const discount = items.reduce((s,x)=>s+(Number(x.coupon_amount)||0),0);
+      const gp = reviewedItems.reduce((s,x)=>s+(Number(x.gross_profit)||0),0);
+      const share = totalRedemptions ? redemptions/totalRedemptions : 0;
+      return { name, redemptions, newCount, retCount, upsellRate, discount, gp, share };
+    }).filter(Boolean);
+
+    // Flag anyone claiming noticeably more than their peers. Only flags when
+    // there's actually a peer group to compare against (3+ advisors with
+    // activity), and the threshold is 1.75x the average redemption count.
+    const avgRedemptions = rowData.length ? rowData.reduce((s,r)=>s+r.redemptions,0) / rowData.length : 0;
+    const canCompare = rowData.length >= 3;
+
+    rowData.sort((a,b)=> b.redemptions - a.redemptions);
+
+    const rows = rowData.map(r=>{
+      const isOutlier = canCompare && r.redemptions > avgRedemptions * 1.75;
+      return `<tr>
+        <td>${r.name}</td><td>${r.redemptions}</td><td>${pct(r.share)}</td><td>${r.newCount} / ${r.retCount}</td>
+        <td>${pct(r.upsellRate)}</td><td class="mono">${money(r.discount)}</td><td class="mono">${money(r.gp)}</td>
+        <td>${isOutlier ? '<span class="pill pill-warn">Above Average</span>' : ''}</td>
+      </tr>`;
+    });
+
+    tbody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="8" class="empty-state">No submissions match these filters yet.</td></tr>`;
   }
 
   function renderCharts(filtered){
@@ -760,6 +862,53 @@
     });
   }
 
+  function renderAdvisorList(){
+    const wrap = document.getElementById('advisor-list');
+    if(advisors.length===0){
+      wrap.innerHTML = `<div class="empty-state">No advisors yet — add the first one above.</div>`;
+      return;
+    }
+    const sorted = [...advisors].sort((a,b)=> a.name.localeCompare(b.name));
+    wrap.innerHTML = `<table>
+      <thead><tr><th>Advisor</th><th></th></tr></thead>
+      <tbody>
+        ${sorted.map(a=>`<tr data-id="${a.id}">
+          <td>${a.name}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            <button class="btn btn-ghost rename-adv-btn" data-id="${a.id}" data-name="${a.name.replace(/"/g,'&quot;')}" style="padding:6px 12px; font-size:11.5px;">Rename</button>
+            <button class="btn btn-ghost del-adv-btn" data-id="${a.id}" data-name="${a.name.replace(/"/g,'&quot;')}" style="padding:6px 12px; font-size:11.5px;">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+    wrap.querySelectorAll('.rename-adv-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const newName = window.prompt('Rename advisor to:', btn.dataset.name);
+        if(!newName || !newName.trim() || newName.trim() === btn.dataset.name) return;
+        try{
+          await renameAdvisor(btn.dataset.id, newName.trim(), btn.dataset.name);
+          showToast('Advisor renamed.');
+          await loadAll();
+        }catch(err){
+          showToast(err.message || 'Could not rename — check your connection.');
+        }
+      });
+    });
+    wrap.querySelectorAll('.del-adv-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!window.confirm(`Remove "${btn.dataset.name}" from the intake dropdown? Past submissions under this name are unaffected.`)) return;
+        try{
+          await deleteAdvisor(btn.dataset.id);
+          showToast('Advisor removed.');
+          await loadAll();
+        }catch(err){
+          showToast('Could not delete — check your connection.');
+        }
+      });
+    });
+  }
+
   function renderExpenseList(){
     const wrap = document.getElementById('expense-list');
     if(expenses.length===0){
@@ -795,6 +944,7 @@
       const filtered = getDashboardFiltered();
       renderStats(filtered);
       renderProgramTable(filtered);
+      renderAdvisorTable(filtered);
       try{ renderCharts(filtered); }catch(err){ console.error('Chart rendering failed:', err); }
     });
   });
@@ -816,6 +966,21 @@
     try{
       await addProgram(name);
       showToast('Program added.');
+      input.value='';
+      await loadAll();
+    }catch(err){
+      showToast(err.message || 'Could not save — check your connection.');
+    }
+  });
+
+  document.getElementById('advisor-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const input = document.getElementById('advisor-name-input');
+    const name = input.value.trim();
+    if(!name) return;
+    try{
+      await addAdvisor(name);
+      showToast('Advisor added.');
       input.value='';
       await loadAll();
     }catch(err){
