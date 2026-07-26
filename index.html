@@ -222,8 +222,11 @@
       </div>
 
       <div class="field">
-        <label for="advisor">Service Advisor Name</label>
-        <input type="text" id="advisor" placeholder="Your name">
+        <label for="advisor">Service Advisor</label>
+        <select id="advisor" required>
+          <option value="" disabled selected>Loading advisors…</option>
+        </select>
+        <input type="text" id="advisor-other" placeholder="Enter your name" style="margin-top:10px; display:none;">
       </div>
 
       <button type="submit" class="btn btn-primary" id="submit-btn">Generate Authorization Number</button>
@@ -271,6 +274,30 @@
   }
   loadPrograms();
 
+  const advisorSelect = document.getElementById('advisor');
+  const advisorOtherInput = document.getElementById('advisor-other');
+  advisorSelect.addEventListener('change', ()=>{
+    advisorOtherInput.style.display = advisorSelect.value === '__other' ? 'block' : 'none';
+    if(advisorSelect.value === '__other') advisorOtherInput.focus();
+  });
+
+  async function loadAdvisors(){
+    try{
+      const res = await fetch(`${API_BASE}/api/advisors`);
+      if(!res.ok) throw new Error('failed');
+      const advisors = await res.json();
+      const options = advisors.map(a => `<option>${a.name}</option>`).join('');
+      advisorSelect.innerHTML =
+        '<option value="" disabled selected>Select your name</option>' +
+        options +
+        '<option value="__other">Other (type below)</option>';
+    }catch(err){
+      advisorSelect.innerHTML = '<option value="__other" selected>Type your name below</option>';
+      advisorOtherInput.style.display = 'block';
+    }
+  }
+  loadAdvisors();
+
   document.querySelectorAll('#customer-type-row .opt').forEach(lbl=>{
     const radio = lbl.querySelector('input');
     radio.addEventListener('change', ()=>{
@@ -301,10 +328,11 @@
     if(program === '__other') program = programOtherInput.value.trim();
     const ro = document.getElementById('ro').value.trim();
     const ctypeEl = document.querySelector('#customer-type-row input:checked');
-    const advisor = document.getElementById('advisor').value.trim();
+    let advisor = advisorSelect.value;
+    if(advisor === '__other') advisor = advisorOtherInput.value.trim();
     const couponTypeEl = document.querySelector('#coupon-type-row input:checked');
 
-    if(!program || !ro || !ctypeEl || !couponTypeEl){
+    if(!program || !ro || !ctypeEl || !advisor || !couponTypeEl){
       errBox.textContent = 'Please fill in every field before submitting.';
       errBox.classList.add('show');
       return;
@@ -315,7 +343,7 @@
       customerType: ctypeEl.value,
       roNumber: ro,
       couponType: couponTypeEl.value,
-      advisorName: advisor || null,
+      advisorName: advisor,
     };
     if(couponTypeEl.value === 'fixed_amount'){
       const v = document.getElementById('couponamt').value;
@@ -363,6 +391,7 @@
     document.querySelectorAll('#coupon-type-row .opt').forEach(l=>l.classList.remove('checked'));
     Object.values(couponFields).forEach(id => document.getElementById(id).style.display = 'none');
     document.getElementById('program-other').style.display = 'none';
+    document.getElementById('advisor-other').style.display = 'none';
     document.getElementById('stub-card').style.display = 'none';
     document.getElementById('form-card').style.display = 'block';
   });
