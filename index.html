@@ -181,12 +181,7 @@
       <div class="field">
         <label for="program">Marketing Program</label>
         <select id="program" required>
-          <option value="" disabled selected>Select a program</option>
-          <option>Grocery Store Receipt</option>
-          <option>AHM Direct Mailer</option>
-          <option>TVI MarketPro3 Direct Mailer</option>
-          <option>Grassroots Marketing</option>
-          <option value="__other">Other (type below)</option>
+          <option value="" disabled selected>Loading programs…</option>
         </select>
         <input type="text" id="program-other" placeholder="Enter program name" style="margin-top:10px; display:none;">
       </div>
@@ -245,6 +240,25 @@
     programOtherInput.style.display = programSelect.value === '__other' ? 'block' : 'none';
     if(programSelect.value === '__other') programOtherInput.focus();
   });
+
+  async function loadPrograms(){
+    try{
+      const res = await fetch(`${API_BASE}/api/programs`);
+      if(!res.ok) throw new Error('failed');
+      const programs = await res.json();
+      const options = programs.map(p => `<option>${p.name}</option>`).join('');
+      programSelect.innerHTML =
+        '<option value="" disabled selected>Select a program</option>' +
+        options +
+        '<option value="__other">Other (type below)</option>';
+    }catch(err){
+      // Fall back to a plain text field if the program list can't be reached,
+      // so the form still works even if the API is briefly unavailable.
+      programSelect.innerHTML = '<option value="__other" selected>Type program below</option>';
+      programOtherInput.style.display = 'block';
+    }
+  }
+  loadPrograms();
 
   document.querySelectorAll('#customer-type-row .opt').forEach(lbl=>{
     const radio = lbl.querySelector('input');
