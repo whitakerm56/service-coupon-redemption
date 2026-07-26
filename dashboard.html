@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Service Coupon Redemption — Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0c0c0e;
+    --bg-elevated:#1a1a1c;
+    --bg-elevated-2:#202023;
+    --border:#28282b;
+    --text:#ffffff;
+    --text-muted:#9a9a9f;
+    --text-faint:#6a6a70;
+    --blue:#3d6cf6;
+    --blue-soft:#5c85ff;
+    --amber-bg:#3a2a12;
+    --amber-text:#e8a33d;
+    --green:#3fae63;
+    --red:#e0554a;
+    --sidebar-bg:#f2f1ee;
+    --sidebar-text:#17171a;
+    --sidebar-muted:#84848a;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{ color:inherit; }
+
+  /* ---------- app shell ---------- */
+  .shell{ display:flex; min-height:100vh; }
+
+  .sidebar{
+    width:250px;
+    flex-shrink:0;
+    background:var(--sidebar-bg);
+    color:var(--sidebar-text);
+    padding:26px 18px;
+    border-right:1px solid #e2e1dc;
+  }
+  .sidebar .eyebrow{
+    color:var(--blue);
+    font-size:10.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    line-height:1.5;
+  }
+  .sidebar .wordmark{
+    font-size:19px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:0.01em;
+    margin:6px 0 2px;
+    color:var(--sidebar-text);
+  }
+  .sidebar .wordmark-sub{ font-size:11px; color:var(--sidebar-muted); margin-bottom:22px; }
+  .nav-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    border-radius:7px;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--sidebar-text);
+    cursor:pointer;
+    margin-bottom:2px;
+  }
+  .nav-item .dot{ width:6px; height:6px; border-radius:50%; background:var(--sidebar-muted); flex-shrink:0; }
+  .nav-item:hover{ background:#e7e6e1; }
+  .nav-item.active{ background:var(--blue); color:#fff; }
+  .nav-item.active .dot{ background:#fff; }
+
+  .main{ flex:1; padding:40px 44px 80px; max-width:1240px; }
+  .eyebrow-main{ color:var(--blue); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; }
+  h1.page-title{ font-size:30px; font-weight:800; text-transform:uppercase; margin:6px 0 8px; }
+  .page-sub{ color:var(--text-muted); font-size:14px; margin:0 0 28px; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card{
+    background:var(--bg-elevated);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:24px;
+  }
+  .card + .card{ margin-top:18px; }
+  .card-title{
+    font-size:13px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--text-muted);
+    margin-bottom:16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .card-title .hint{ font-size:11px; font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-faint); }
+
+  label{
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    color:var(--text-muted);
+    margin-bottom:7px;
+  }
+  input[type=text], input[type=number], input[type=month], select, textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:var(--bg-elevated-2);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+  }
+  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--blue); }
+
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    transition:filter .15s ease;
+  }
+  .btn:hover{ filter:brightness(1.15); }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-ghost{ background:var(--bg-elevated-2); color:var(--text); border:1px solid var(--border); }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .filter-row{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
+  .filter-row > div{ min-width:150px; }
+
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:14px; margin-top:18px; }
+  .stat{
+    background:var(--bg-elevated-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 18px;
+  }
+  .stat .num{ font-size:24px; font-weight:800; color:var(--blue-soft); }
+  .stat .lbl{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-top:3px; }
+
+  .banner{
+    background:var(--amber-bg);
+    color:var(--amber-text);
+    border-radius:8px;
+    padding:12px 16px;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:18px;
+  }
+
+  table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
+  th{
+    text-align:left;
+    font-size:10.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--text-muted);
+    border-bottom:1px solid var(--border);
+    padding:9px 8px;
+    white-space:nowrap;
+  }
+  td{ padding:10px 8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tr.unreviewed td{ background:rgba(232,163,61,0.05); }
+  .pill{ display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; padding:3px 9px; border-radius:20px; }
+  .pill-warn{ background:rgba(232,163,61,0.18); color:var(--amber-text); }
+  .pill-good{ background:rgba(63,174,99,0.16); color:var(--green); }
+  .pill-up{ background:rgba(61,108,246,0.18); color:var(--blue-soft); }
+  .mono{ font-variant-numeric:tabular-nums; }
+  td.pos{ color:var(--green); font-weight:700; }
+  td.neg{ color:var(--red); font-weight:700; }
+
+  .review-panel{
+    background:var(--bg-elevated-2);
+    border:1px solid var(--border);
+    padding:16px;
+    margin-top:2px;
+    border-radius:8px;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px 16px;
+  }
+  .review-panel .full{ grid-column:1/-1; }
+  .review-panel .actions{ grid-column:1/-1; display:flex; gap:10px; justify-content:flex-end; }
+
+  .empty-state{ text-align:center; padding:36px 20px; color:var(--text-muted); font-size:13.5px; }
+
+  .charts-row{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  canvas{ max-height:270px; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--bg-elevated-2); color:var(--text); border:1px solid var(--border);
+    padding:12px 20px; border-radius:8px; font-size:13px; font-weight:600;
+    border-left:3px solid var(--green);
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    z-index:999; display:none;
+  }
+
+  @media (max-width:900px){
+    .shell{ flex-direction:column; }
+    .sidebar{ width:100%; }
+    .review-panel{ grid-template-columns:1fr 1fr; }
+    .charts-row{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app-shell">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="eyebrow">Fixed Operations ·<br>Marketing ROI</div>
+      <div class="wordmark">Coupon Redemption</div>
+      <div class="wordmark-sub">Manager view · internal use only</div>
+
+      <div class="nav-item active" data-panel="dashboard"><span class="dot"></span>Dashboard</div>
+      <div class="nav-item" data-panel="expenses"><span class="dot"></span>Program Expenses</div>
+      <div class="nav-item" data-panel="settings"><span class="dot"></span>Settings</div>
+    </div>
+
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="eyebrow-main">Fixed Operations · Marketing ROI</div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Review each redemption against the RO in the DMS, then track what each marketing program is actually worth.</p>
+
+        <div class="card">
+          <div class="card-title">Filters</div>
+          <div class="filter-row">
+            <div><label>Month</label><select id="f-month"><option value="all">All time</option></select></div>
+            <div><label>Marketing Program</label><select id="f-program"><option value="all">All programs</option></select></div>
+            <div><label>Review Status</label>
+              <select id="f-status">
+                <option value="all">All</option>
+                <option value="unreviewed">Needs review</option>
+                <option value="reviewed">Reviewed</option>
+              </select>
+            </div>
+            <div><button class="btn btn-ghost" id="export-csv">Export CSV</button></div>
+            <div><button class="btn btn-ghost" id="refresh-data">Refresh</button></div>
+          </div>
+          <div class="stat-grid" id="stat-grid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Value by Marketing Program <span class="hint">gross profit vs. program expense, for the selected month(s)</span></div>
+          <div style="overflow-x:auto;">
+            <table id="program-table">
+              <thead><tr>
+                <th>Program</th><th>Redemptions</th><th>New / Ret.</th><th>Upsell Rate</th>
+                <th>Discount Given</th><th>Gross Profit</th><th>Expense</th><th>Net Value</th><th>ROI</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Charts</div>
+          <div class="charts-row">
+            <canvas id="chart-redemptions"></canvas>
+            <canvas id="chart-profit"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Submissions</div>
+          <div id="submissions-list"></div>
+        </div>
+      </div>
+
+      <!-- EXPENSES -->
+      <div class="panel" id="panel-expenses">
+        <div class="eyebrow-main">Fixed Operations · Marketing ROI</div>
+        <h1 class="page-title">Program Expenses</h1>
+        <p class="page-sub">Log what each marketing program cost for a given month. This feeds the ROI column on the dashboard.</p>
+
+        <div class="card">
+          <div class="card-title">Add an Expense</div>
+          <form id="expense-form" style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:14px; align-items:end;">
+            <div><label>Program</label><select id="exp-program"></select></div>
+            <div><label>Month</label><input type="month" id="exp-month" required></div>
+            <div><label>Amount Spent ($)</label><input type="number" id="exp-amount" min="0" step="0.01" required></div>
+            <div><button type="submit" class="btn btn-primary">Save</button></div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Logged Expenses</div>
+          <div id="expense-list"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="panel" id="panel-settings">
+        <div class="eyebrow-main">Fixed Operations · Marketing ROI</div>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-sub">Connection info for this page.</p>
+        <div class="card">
+          <div class="card-title">API</div>
+          <p style="font-size:13.5px; color:var(--text-muted); line-height:1.6;">
+            Worker endpoint: <span class="mono" id="settings-api-base" style="color:var(--text);"></span><br>
+            This page has no password right now — access is limited to whoever has this URL. Planned next step: restrict the Worker to the dealership's IP range in the Cloudflare dashboard.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // Point this at your deployed Cloudflare Worker
+  const API_BASE = "https://api.ccccopilot.com"; // <-- update to your Worker's URL/route
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.getElementById('settings-api-base').textContent = API_BASE;
+  });
+
+  let submissions = [];
+  let expenses = [];
+  let knownPrograms = new Set(["Grocery Store Receipt","AHM Direct Mailer","TVI MarketPro3 Direct Mailer","Grassroots Marketing"]);
+  let chartRedemptions, chartProfit;
+
+  // No password layer right now — see Settings tab. When IP restriction is
+  // added at the Cloudflare edge (or a MANAGER_API_KEY is added later), this
+  // is the function to update so requests carry the right header.
+  function apiHeaders(){ return { 'Content-Type': 'application/json' }; }
+
+  // ---------- nav ----------
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('panel-' + item.dataset.panel).classList.add('active');
+    });
+  });
+
+  // ---------- utils ----------
+  function money(n){ n = Number(n)||0; return n.toLocaleString('en-US', {style:'currency', currency:'USD'}); }
+  function pct(n){ if(!isFinite(n)) return '—'; return (n*100).toFixed(0) + '%'; }
+  function monthKey(dateStr){ return dateStr.slice(0,7); }
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(()=>{ t.style.display='none'; }, 2400);
+  }
+
+  // ---------- data ----------
+  async function loadAll(){
+    try{
+      const [subRes, expRes] = await Promise.all([
+        fetch(`${API_BASE}/api/manager/submissions`, { headers: apiHeaders() }),
+        fetch(`${API_BASE}/api/manager/expenses`, { headers: apiHeaders() }),
+      ]);
+      if(!subRes.ok || !expRes.ok) return false;
+      submissions = await subRes.json();
+      expenses = await expRes.json();
+      submissions.forEach(s=>{ if(s.program) knownPrograms.add(s.program); });
+      expenses.forEach(e=>{ if(e.program) knownPrograms.add(e.program); });
+      renderAll();
+      return true;
+    }catch(err){
+      return false;
+    }
+  }
+
+  async function updateSubmission(id, patch){
+    const res = await fetch(`${API_BASE}/api/manager/submissions/${id}`, {
+      method: 'PATCH', headers: apiHeaders(), body: JSON.stringify(patch)
+    });
+    if(!res.ok) throw new Error('update failed');
+    return res.json();
+  }
+  async function saveExpense(data){
+    const res = await fetch(`${API_BASE}/api/manager/expenses`, {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify(data)
+    });
+    if(!res.ok) throw new Error('save failed');
+    return res.json();
+  }
+  async function deleteExpense(id){
+    const res = await fetch(`${API_BASE}/api/manager/expenses/${id}`, {
+      method: 'DELETE', headers: apiHeaders()
+    });
+    if(!res.ok) throw new Error('delete failed');
+  }
+
+  // ---------- filters ----------
+  function getFilteredSubmissions(){
+    const month = document.getElementById('f-month').value;
+    const program = document.getElementById('f-program').value;
+    const status = document.getElementById('f-status').value;
+    return submissions.filter(s=>{
+      if(month !== 'all' && monthKey(s.created_at) !== month) return false;
+      if(program !== 'all' && s.program !== program) return false;
+      if(status === 'unreviewed' && s.reviewed) return false;
+      if(status === 'reviewed' && !s.reviewed) return false;
+      return true;
+    });
+  }
+
+  function populateFilterOptions(){
+    const monthSel = document.getElementById('f-month');
+    const progSel = document.getElementById('f-program');
+    const expProgSel = document.getElementById('exp-program');
+
+    const months = new Set(submissions.map(s=>monthKey(s.created_at)));
+    const monthsSorted = [...months].sort().reverse();
+    const curMonthVal = monthSel.value;
+    monthSel.innerHTML = '<option value="all">All time</option>' + monthsSorted.map(m=>`<option value="${m}">${m}</option>`).join('');
+    if([...monthSel.options].some(o=>o.value===curMonthVal)) monthSel.value = curMonthVal;
+
+    const progsSorted = [...knownPrograms].sort();
+    const curProgVal = progSel.value;
+    progSel.innerHTML = '<option value="all">All programs</option>' + progsSorted.map(p=>`<option value="${p}">${p}</option>`).join('');
+    if([...progSel.options].some(o=>o.value===curProgVal)) progSel.value = curProgVal;
+
+    expProgSel.innerHTML = progsSorted.map(p=>`<option value="${p}">${p}</option>`).join('');
+  }
+
+  // ---------- render ----------
+  function renderAll(){
+    populateFilterOptions();
+    const filtered = getFilteredSubmissions();
+    renderStats(filtered);
+    renderProgramTable(filtered);
+    renderCharts(filtered);
+    renderSubmissionsList(filtered);
+    renderExpenseList();
+  }
+
+  function renderStats(filtered){
+    const grid = document.getElementById('stat-grid');
+    const totalRedemptions = filtered.length;
+    const totalDiscount = filtered.reduce((s,x)=>s+(Number(x.coupon_amount)||0),0);
+    const reviewedItems = filtered.filter(x=>x.reviewed);
+    const totalGP = reviewedItems.reduce((s,x)=>s+(Number(x.gross_profit)||0),0);
+    const upsells = reviewedItems.filter(x=>x.transaction_type==='upsell').length;
+    const upsellRate = reviewedItems.length ? upsells/reviewedItems.length : NaN;
+    const needsReview = filtered.filter(x=>!x.reviewed).length;
+
+    grid.innerHTML = `
+      <div class="stat"><div class="num">${totalRedemptions}</div><div class="lbl">Redemptions</div></div>
+      <div class="stat"><div class="num">${money(totalDiscount)}</div><div class="lbl">Total Discounted</div></div>
+      <div class="stat"><div class="num">${money(totalGP)}</div><div class="lbl">Gross Profit (reviewed)</div></div>
+      <div class="stat"><div class="num">${pct(upsellRate)}</div><div class="lbl">Upsell Rate (reviewed)</div></div>
+      <div class="stat"><div class="num">${needsReview}</div><div class="lbl">Needs Review</div></div>
+    `;
+  }
+
+  function renderProgramTable(filtered){
+    const monthFilter = document.getElementById('f-month').value;
+    const tbody = document.querySelector('#program-table tbody');
+    const programs = [...knownPrograms].sort();
+
+    const rows = programs.map(prog=>{
+      const items = filtered.filter(x=>x.program===prog);
+      if(items.length===0) return null;
+      const redemptions = items.length;
+      const newCount = items.filter(x=>x.customer_type==='new').length;
+      const retCount = items.filter(x=>x.customer_type==='returning').length;
+      const reviewedItems = items.filter(x=>x.reviewed);
+      const upsells = reviewedItems.filter(x=>x.transaction_type==='upsell').length;
+      const upsellRate = reviewedItems.length ? upsells/reviewedItems.length : NaN;
+      const discount = items.reduce((s,x)=>s+(Number(x.coupon_amount)||0),0);
+      const gp = reviewedItems.reduce((s,x)=>s+(Number(x.gross_profit)||0),0);
+
+      let expenseTotal = 0;
+      if(monthFilter === 'all'){
+        expenseTotal = expenses.filter(e=>e.program===prog).reduce((s,e)=>s+(Number(e.amount)||0),0);
+      } else {
+        expenseTotal = expenses.filter(e=>e.program===prog && e.month===monthFilter).reduce((s,e)=>s+(Number(e.amount)||0),0);
+      }
+      const netValue = gp - expenseTotal;
+      const roi = expenseTotal>0 ? netValue/expenseTotal : NaN;
+
+      return `<tr>
+        <td>${prog}</td><td>${redemptions}</td><td>${newCount} / ${retCount}</td><td>${pct(upsellRate)}</td>
+        <td class="mono">${money(discount)}</td><td class="mono">${money(gp)}</td>
+        <td class="mono">${expenseTotal>0?money(expenseTotal):'—'}</td>
+        <td class="mono ${netValue>=0?'pos':'neg'}">${expenseTotal>0?money(netValue):'—'}</td>
+        <td class="mono ${roi>=0?'pos':'neg'}">${expenseTotal>0?pct(roi):'—'}</td>
+      </tr>`;
+    }).filter(Boolean);
+
+    tbody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="9" class="empty-state">No submissions match these filters yet.</td></tr>`;
+  }
+
+  function renderCharts(filtered){
+    const programs = [...knownPrograms].sort().filter(p=>filtered.some(x=>x.program===p));
+    const redemptionCounts = programs.map(p=>filtered.filter(x=>x.program===p).length);
+    const gpByProgram = programs.map(p=>filtered.filter(x=>x.program===p && x.reviewed).reduce((s,x)=>s+(Number(x.gross_profit)||0),0));
+
+    const ctx1 = document.getElementById('chart-redemptions').getContext('2d');
+    const ctx2 = document.getElementById('chart-profit').getContext('2d');
+    if(chartRedemptions) chartRedemptions.destroy();
+    if(chartProfit) chartProfit.destroy();
+
+    Chart.defaults.color = '#9a9a9f';
+    Chart.defaults.borderColor = '#28282b';
+
+    chartRedemptions = new Chart(ctx1, {
+      type:'bar',
+      data:{ labels:programs, datasets:[{ label:'Redemptions', data:redemptionCounts, backgroundColor:'#3d6cf6', borderRadius:4 }]},
+      options:{ responsive:true, plugins:{ legend:{display:false}, title:{display:true, text:'Redemptions by Program', color:'#fff', font:{weight:700, size:13} } },
+        scales:{ y:{ beginAtZero:true, ticks:{precision:0} } } }
+    });
+    chartProfit = new Chart(ctx2, {
+      type:'bar',
+      data:{ labels:programs, datasets:[{ label:'Gross Profit', data:gpByProgram, backgroundColor:'#e8a33d', borderRadius:4 }]},
+      options:{ responsive:true, plugins:{ legend:{display:false}, title:{display:true, text:'Gross Profit by Program (reviewed)', color:'#fff', font:{weight:700, size:13} } },
+        scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>'$'+v } } } }
+    });
+  }
+
+  function renderSubmissionsList(filtered){
+    const wrap = document.getElementById('submissions-list');
+    if(filtered.length === 0){
+      wrap.innerHTML = `<div class="empty-state">Nothing here yet — submissions matching your filters will show up in this list.</div>`;
+      return;
+    }
+    wrap.innerHTML = `<table>
+      <thead><tr>
+        <th>Date</th><th>RO#</th><th>Program</th><th>Cust.</th><th>Advisor</th>
+        <th>Oil Price</th><th>Discount</th><th>Auth #</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${filtered.map(s=>{
+          const d = new Date(s.created_at);
+          const dstr = d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'});
+          return `<tr class="${s.reviewed?'':'unreviewed'}" data-id="${s.id}">
+            <td>${dstr}</td>
+            <td class="mono">${s.ro_number}</td>
+            <td>${s.program}</td>
+            <td>${s.customer_type==='new'?'New':'Returning'}</td>
+            <td>${s.advisor_name||'—'}</td>
+            <td class="mono">${money(s.oil_change_cost)}</td>
+            <td class="mono">${money(s.coupon_amount)}</td>
+            <td class="mono">${s.auth_number}</td>
+            <td>${s.reviewed ? `<span class="pill pill-good">Reviewed</span>` : `<span class="pill pill-warn">Needs Review</span>`}${s.reviewed && s.transaction_type==='upsell' ? ` <span class="pill pill-up">Upsell</span>` : ''}</td>
+            <td><button class="btn btn-ghost review-btn" data-id="${s.id}" style="padding:6px 12px; font-size:11.5px;">${s.reviewed?'Edit':'Review'}</button></td>
+          </tr>
+          <tr class="review-row" data-id="${s.id}" style="display:none;"><td colspan="10" style="padding:0; border-bottom:none;"></td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+    wrap.querySelectorAll('.review-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=> toggleReviewPanel(btn.dataset.id));
+    });
+  }
+
+  window.toggleReviewPanel = function(id){
+    const row = document.querySelector(`.review-row[data-id="${id}"]`);
+    const cell = row.querySelector('td');
+    const isOpen = row.style.display !== 'none';
+    document.querySelectorAll('.review-row').forEach(r=>{ r.style.display='none'; r.querySelector('td').innerHTML=''; });
+    if(isOpen) return;
+
+    const s = submissions.find(x=>x.id===id);
+    row.style.display = 'table-row';
+    cell.innerHTML = `
+      <div class="review-panel">
+        <div><label>Actual RO Total ($)</label><input type="number" step="0.01" min="0" id="rev-rototal-${id}" value="${s.ro_total ?? ''}" placeholder="From DMS"></div>
+        <div><label>Gross Profit ($)</label><input type="number" step="0.01" min="0" id="rev-gp-${id}" value="${s.gross_profit ?? ''}" placeholder="From DMS"></div>
+        <div><label>Transaction Type</label>
+          <select id="rev-ttype-${id}">
+            <option value="single" ${s.transaction_type==='single'?'selected':''}>Single line (coupon item only)</option>
+            <option value="upsell" ${s.transaction_type==='upsell'?'selected':''}>Upsell (additional items purchased)</option>
+          </select>
+        </div>
+        <div><label>Mark As</label>
+          <select id="rev-reviewed-${id}">
+            <option value="yes" ${s.reviewed?'selected':''}>Reviewed</option>
+            <option value="no" ${!s.reviewed?'selected':''}>Not yet reviewed</option>
+          </select>
+        </div>
+        <div class="full"><label>Notes</label><textarea id="rev-notes-${id}" rows="2" placeholder="Optional">${s.notes||''}</textarea></div>
+        <div class="actions">
+          <button class="btn btn-ghost" onclick="toggleReviewPanel('${id}')">Cancel</button>
+          <button class="btn btn-primary" id="rev-save-${id}">Save Review</button>
+        </div>
+      </div>
+    `;
+    document.getElementById(`rev-save-${id}`).addEventListener('click', async ()=>{
+      const patch = {
+        roTotal: document.getElementById(`rev-rototal-${id}`).value === '' ? null : Number(document.getElementById(`rev-rototal-${id}`).value),
+        grossProfit: document.getElementById(`rev-gp-${id}`).value === '' ? null : Number(document.getElementById(`rev-gp-${id}`).value),
+        transactionType: document.getElementById(`rev-ttype-${id}`).value,
+        reviewed: document.getElementById(`rev-reviewed-${id}`).value === 'yes',
+        notes: document.getElementById(`rev-notes-${id}`).value.trim(),
+      };
+      try{
+        await updateSubmission(id, patch);
+        showToast('Review saved.');
+        await loadAll();
+      }catch(err){
+        showToast('Could not save — check your connection.');
+      }
+    });
+  };
+
+  function renderExpenseList(){
+    const wrap = document.getElementById('expense-list');
+    if(expenses.length===0){
+      wrap.innerHTML = `<div class="empty-state">No program expenses logged yet.</div>`;
+      return;
+    }
+    const sorted = [...expenses].sort((a,b)=> (b.month||'').localeCompare(a.month||''));
+    wrap.innerHTML = `<table>
+      <thead><tr><th>Month</th><th>Program</th><th>Amount</th><th></th></tr></thead>
+      <tbody>
+        ${sorted.map(e=>`<tr>
+          <td class="mono">${e.month}</td><td>${e.program}</td><td class="mono">${money(e.amount)}</td>
+          <td><button class="btn btn-ghost del-exp-btn" data-id="${e.id}" style="padding:6px 12px; font-size:11.5px;">Delete</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+    wrap.querySelectorAll('.del-exp-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        try{
+          await deleteExpense(btn.dataset.id);
+          showToast('Expense removed.');
+          await loadAll();
+        }catch(err){
+          showToast('Could not delete — check your connection.');
+        }
+      });
+    });
+  }
+
+  // ---------- events ----------
+  ['f-month','f-program','f-status'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', ()=>{
+      const filtered = getFilteredSubmissions();
+      renderStats(filtered);
+      renderProgramTable(filtered);
+      renderCharts(filtered);
+      renderSubmissionsList(filtered);
+    });
+  });
+
+  document.getElementById('refresh-data').addEventListener('click', loadAll);
+
+  document.getElementById('expense-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const program = document.getElementById('exp-program').value;
+    const month = document.getElementById('exp-month').value;
+    const amount = document.getElementById('exp-amount').value;
+    if(!program || !month || amount==='') return;
+    try{
+      await saveExpense({ program, month, amount: Number(amount) });
+      showToast('Expense saved.');
+      document.getElementById('exp-amount').value='';
+      await loadAll();
+    }catch(err){
+      showToast('Could not save — check your connection.');
+    }
+  });
+
+  document.getElementById('export-csv').addEventListener('click', ()=>{
+    const filtered = getFilteredSubmissions();
+    const headers = ['Date','RO Number','Program','Customer Type','Advisor','Oil Change Price','Coupon Amount','Auth Number','Reviewed','RO Total','Gross Profit','Transaction Type','Notes'];
+    const rows = filtered.map(s=>[
+      s.created_at, s.ro_number, s.program, s.customer_type, s.advisor_name||'',
+      s.oil_change_cost, s.coupon_amount, s.auth_number, s.reviewed?'Yes':'No',
+      s.ro_total??'', s.gross_profit??'', s.transaction_type||'', (s.notes||'').replace(/,/g,';')
+    ]);
+    const csv = [headers.join(','), ...rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `coupon-submissions-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  });
+
+  // ---------- init ----------
+  loadAll();
+</script>
+</body>
+</html>

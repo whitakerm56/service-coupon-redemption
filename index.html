@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coupon Redemption</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0c0e;
+    --bg-elevated:#1a1a1c;
+    --bg-elevated-2:#202023;
+    --border:#28282b;
+    --text:#ffffff;
+    --text-muted:#9a9a9f;
+    --text-faint:#6a6a70;
+    --blue:#3d6cf6;
+    --blue-soft:#5c85ff;
+    --amber-bg:#3a2a12;
+    --amber-text:#e8a33d;
+    --green:#3fae63;
+    --red:#e0554a;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:48px 24px 80px; }
+
+  .eyebrow{
+    color:var(--blue);
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.12em;
+    line-height:1.6;
+  }
+  h1{
+    font-size:32px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:0.01em;
+    margin:6px 0 8px;
+  }
+  .sub{ color:var(--text-muted); font-size:14.5px; margin:0 0 32px; line-height:1.5; }
+
+  .card{
+    background:var(--bg-elevated);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:28px;
+  }
+  .card + .card{ margin-top:20px; }
+
+  label{
+    display:block;
+    font-size:11.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--text-muted);
+    margin-bottom:8px;
+  }
+  .field{ margin-bottom:20px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  input[type=text], input[type=number], select{
+    width:100%;
+    padding:12px 13px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:var(--bg-elevated-2);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+  }
+  input::placeholder{ color:var(--text-faint); }
+  input:focus, select:focus{
+    outline:none;
+    border-color:var(--blue);
+  }
+  select{ appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%239a9a9f'/></svg>");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+
+  .radio-row{ display:flex; gap:10px; }
+  .radio-row label.opt{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:12px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+    text-transform:none;
+    letter-spacing:0;
+    color:var(--text);
+    background:var(--bg-elevated-2);
+    margin-bottom:0;
+  }
+  .radio-row input[type=radio]{ accent-color:var(--blue); }
+  .radio-row label.opt.checked{ border-color:var(--blue); background:rgba(61,108,246,0.12); }
+
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:14.5px;
+    padding:14px 22px;
+    border-radius:7px;
+    border:none;
+    cursor:pointer;
+    width:100%;
+    transition:filter .15s ease;
+  }
+  .btn:hover{ filter:brightness(1.1); }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-dark{ background:var(--bg-elevated-2); color:var(--text); border:1px solid var(--border); }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .banner{
+    background:var(--amber-bg);
+    color:var(--amber-text);
+    border-radius:8px;
+    padding:12px 16px;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:24px;
+    display:none;
+  }
+  .banner.show{ display:block; }
+
+  .stub{
+    text-align:center;
+    padding:12px 0 4px;
+  }
+  .stub .eyebrow2{
+    color:var(--blue);
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.14em;
+  }
+  .stub .auth-number{
+    font-family:'Inter',sans-serif;
+    font-weight:800;
+    font-size:46px;
+    letter-spacing:0.04em;
+    color:var(--text);
+    margin:16px 0 6px;
+  }
+  .stub .ro{ color:var(--text-muted); font-size:13.5px; }
+  .stub .instructions{
+    margin-top:18px;
+    font-size:12.5px;
+    color:var(--amber-text);
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Fixed Operations · Service Drive</div>
+  <h1>Coupon Redemption</h1>
+  <p class="sub">Log every coupon a customer presents, then write the authorization number on the coupon before it goes in the drawer.</p>
+
+  <div class="card" id="form-card">
+    <div class="banner" id="form-error"></div>
+    <form id="intake-form">
+      <div class="field">
+        <label for="program">Marketing Program</label>
+        <select id="program" required>
+          <option value="" disabled selected>Select a program</option>
+          <option>Grocery Store Receipt</option>
+          <option>AHM Direct Mailer</option>
+          <option>TVI MarketPro3 Direct Mailer</option>
+          <option>Grassroots Marketing</option>
+          <option value="__other">Other (type below)</option>
+        </select>
+        <input type="text" id="program-other" placeholder="Enter program name" style="margin-top:10px; display:none;">
+      </div>
+
+      <div class="field">
+        <label for="ro">Repair Order Number</label>
+        <input type="text" id="ro" placeholder="e.g. 48213" required>
+      </div>
+
+      <div class="field">
+        <label>New or Returning Customer</label>
+        <div class="radio-row" id="customer-type-row">
+          <label class="opt"><input type="radio" name="ctype" value="new"> New Customer</label>
+          <label class="opt"><input type="radio" name="ctype" value="returning"> Returning Customer</label>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="oilcost">Oil Change Price ($)</label>
+          <input type="number" id="oilcost" min="0" step="0.01" placeholder="69.95" required>
+        </div>
+        <div class="field">
+          <label for="couponamt">Coupon Amount ($)</label>
+          <input type="number" id="couponamt" min="0" step="0.01" placeholder="20.00" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="advisor">Service Advisor Name</label>
+        <input type="text" id="advisor" placeholder="Your name">
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submit-btn">Generate Authorization Number</button>
+    </form>
+  </div>
+
+  <div class="card" id="stub-card" style="display:none;">
+    <div class="stub">
+      <div class="eyebrow2">Authorization</div>
+      <div class="auth-number" id="stub-auth"></div>
+      <div class="ro">RO <span id="stub-ro"></span></div>
+      <div class="instructions">Write this number on the coupon</div>
+    </div>
+    <button class="btn btn-dark" id="new-submission-btn" style="margin-top:24px;">Start Next Submission</button>
+  </div>
+</div>
+
+<script>
+  // Point this at your deployed Cloudflare Worker
+  const API_BASE = "https://api.ccccopilot.com"; // <-- update to your Worker's URL/route
+
+  const programSelect = document.getElementById('program');
+  const programOtherInput = document.getElementById('program-other');
+  programSelect.addEventListener('change', ()=>{
+    programOtherInput.style.display = programSelect.value === '__other' ? 'block' : 'none';
+    if(programSelect.value === '__other') programOtherInput.focus();
+  });
+
+  document.querySelectorAll('#customer-type-row .opt').forEach(lbl=>{
+    const radio = lbl.querySelector('input');
+    radio.addEventListener('change', ()=>{
+      document.querySelectorAll('#customer-type-row .opt').forEach(l=>l.classList.remove('checked'));
+      lbl.classList.add('checked');
+    });
+  });
+
+  document.getElementById('intake-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const errBox = document.getElementById('form-error');
+    errBox.classList.remove('show');
+
+    let program = programSelect.value;
+    if(program === '__other') program = programOtherInput.value.trim();
+    const ro = document.getElementById('ro').value.trim();
+    const ctypeEl = document.querySelector('#customer-type-row input:checked');
+    const oilcost = document.getElementById('oilcost').value;
+    const couponamt = document.getElementById('couponamt').value;
+    const advisor = document.getElementById('advisor').value.trim();
+
+    if(!program || !ro || !ctypeEl || oilcost==='' || couponamt===''){
+      errBox.textContent = 'Please fill in every field before submitting.';
+      errBox.classList.add('show');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try{
+      const res = await fetch(`${API_BASE}/api/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          program,
+          customerType: ctypeEl.value,
+          roNumber: ro,
+          oilChangeCost: Number(oilcost),
+          couponAmount: Number(couponamt),
+          advisorName: advisor || null,
+        }),
+      });
+      if(!res.ok) throw new Error('Request failed');
+      const data = await res.json();
+
+      document.getElementById('stub-ro').textContent = data.roNumber;
+      document.getElementById('stub-auth').textContent = data.authNumber;
+      document.getElementById('form-card').style.display = 'none';
+      document.getElementById('stub-card').style.display = 'block';
+    }catch(err){
+      errBox.textContent = 'Something went wrong saving this submission. Please try again.';
+      errBox.classList.add('show');
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Generate Authorization Number';
+    }
+  });
+
+  document.getElementById('new-submission-btn').addEventListener('click', ()=>{
+    document.getElementById('intake-form').reset();
+    document.querySelectorAll('#customer-type-row .opt').forEach(l=>l.classList.remove('checked'));
+    document.getElementById('program-other').style.display = 'none';
+    document.getElementById('stub-card').style.display = 'none';
+    document.getElementById('form-card').style.display = 'block';
+  });
+</script>
+</body>
+</html>
