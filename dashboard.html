@@ -450,9 +450,18 @@
     const filtered = getFilteredSubmissions();
     renderStats(filtered);
     renderProgramTable(filtered);
-    renderCharts(filtered);
     renderSubmissionsList(filtered);
     renderExpenseList();
+    try{
+      renderCharts(filtered);
+    }catch(err){
+      console.error('Chart rendering failed (rest of the dashboard is unaffected):', err);
+      const chartsCard = document.getElementById('chart-redemptions')?.closest('.card');
+      if(chartsCard){
+        chartsCard.querySelector('.charts-row').innerHTML =
+          '<div class="empty-state" style="grid-column:1/-1;">Charts couldn\'t load (likely a blocked script), but everything else on this page still works.</div>';
+      }
+    }
   }
 
   function renderStats(filtered){
@@ -661,8 +670,8 @@
       const filtered = getFilteredSubmissions();
       renderStats(filtered);
       renderProgramTable(filtered);
-      renderCharts(filtered);
       renderSubmissionsList(filtered);
+      try{ renderCharts(filtered); }catch(err){ console.error('Chart rendering failed:', err); }
     });
   });
 
