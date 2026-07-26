@@ -329,7 +329,7 @@
           </form>
           <div id="program-list"></div>
           <p style="font-size:12px; color:var(--text-faint); margin-top:14px; line-height:1.5;">
-            Removing a program here takes it out of the advisor dropdown going forward — it won't change or hide any submissions already logged under that name.
+            Renaming updates every past submission and expense filed under the old name, so history stays grouped correctly. Deleting only takes a program out of the advisor dropdown going forward — it won't change or hide anything already logged.
           </p>
         </div>
 
@@ -433,9 +433,9 @@
     }
     return res.json();
   }
-  async function renameProgram(id, name){
+  async function renameProgram(id, name, oldName){
     const res = await fetch(`${API_BASE}/api/manager/programs/${id}`, {
-      method: 'PATCH', headers: apiHeaders(), body: JSON.stringify({ name })
+      method: 'PATCH', headers: apiHeaders(), body: JSON.stringify({ name, oldName })
     });
     if(!res.ok){
       const body = await res.json().catch(()=>({}));
@@ -727,7 +727,7 @@
         const newName = window.prompt('Rename program to:', btn.dataset.name);
         if(!newName || !newName.trim() || newName.trim() === btn.dataset.name) return;
         try{
-          await renameProgram(btn.dataset.id, newName.trim());
+          await renameProgram(btn.dataset.id, newName.trim(), btn.dataset.name);
           showToast('Program renamed.');
           await loadAll();
         }catch(err){
