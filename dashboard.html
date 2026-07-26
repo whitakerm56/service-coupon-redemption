@@ -234,33 +234,61 @@
       <div class="wordmark">Coupon Redemption</div>
       <div class="wordmark-sub">Manager view · internal use only</div>
 
+      <div class="nav-item" data-panel="submissions"><span class="dot"></span>Submissions</div>
       <div class="nav-item active" data-panel="dashboard"><span class="dot"></span>Dashboard</div>
-      <div class="nav-item" data-panel="expenses"><span class="dot"></span>Program Expenses</div>
       <div class="nav-item" data-panel="settings"><span class="dot"></span>Settings</div>
     </div>
 
     <div class="main">
 
-      <!-- DASHBOARD -->
-      <div class="panel active" id="panel-dashboard">
+      <!-- SUBMISSIONS -->
+      <div class="panel" id="panel-submissions">
         <div class="eyebrow-main">Fixed Operations · Marketing ROI</div>
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-sub">Review each redemption against the RO in the DMS, then track what each marketing program is actually worth.</p>
+        <h1 class="page-title">Submissions</h1>
+        <p class="page-sub">Review each redemption against the RO in the DMS.</p>
 
         <div class="card">
           <div class="card-title">Filters</div>
           <div class="filter-row">
-            <div><label>Month</label><select id="f-month"><option value="all">All time</option></select></div>
-            <div><label>Marketing Program</label><select id="f-program"><option value="all">All programs</option></select></div>
+            <div><label>Month</label><select id="s-month"><option value="all">All time</option></select></div>
+            <div><label>Marketing Program</label><select id="s-program"><option value="all">All programs</option></select></div>
             <div><label>Review Status</label>
-              <select id="f-status">
+              <select id="s-status">
                 <option value="all">All</option>
                 <option value="unreviewed">Needs review</option>
                 <option value="reviewed">Reviewed</option>
               </select>
             </div>
             <div><button class="btn btn-ghost" id="export-csv">Export CSV</button></div>
-            <div><button class="btn btn-ghost" id="refresh-data">Refresh</button></div>
+            <div><button class="btn btn-ghost" id="s-refresh">Refresh</button></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">All Submissions</div>
+          <div id="submissions-list"></div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="eyebrow-main">Fixed Operations · Marketing ROI</div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Track what each marketing program is actually worth.</p>
+
+        <div class="card">
+          <div class="card-title">Filters</div>
+          <div class="filter-row">
+            <div><label>Month</label><select id="d-month"><option value="all">All time</option></select></div>
+            <div><label>Marketing Program</label><select id="d-program"><option value="all">All programs</option></select></div>
+            <div><label>Review Status</label>
+              <select id="d-status">
+                <option value="all">All</option>
+                <option value="unreviewed">Needs review</option>
+                <option value="reviewed">Reviewed</option>
+              </select>
+            </div>
+            <div><button class="btn btn-ghost" id="d-refresh">Refresh</button></div>
           </div>
           <div class="stat-grid" id="stat-grid"></div>
         </div>
@@ -285,21 +313,28 @@
             <canvas id="chart-profit"></canvas>
           </div>
         </div>
-
-        <div class="card">
-          <div class="card-title">Submissions</div>
-          <div id="submissions-list"></div>
-        </div>
       </div>
 
-      <!-- EXPENSES -->
-      <div class="panel" id="panel-expenses">
+      <!-- SETTINGS -->
+      <div class="panel" id="panel-settings">
         <div class="eyebrow-main">Fixed Operations · Marketing ROI</div>
-        <h1 class="page-title">Program Expenses</h1>
-        <p class="page-sub">Log what each marketing program cost for a given month. This feeds the ROI column on the dashboard.</p>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-sub">Marketing programs, program expenses, and connection info.</p>
 
         <div class="card">
-          <div class="card-title">Add an Expense</div>
+          <div class="card-title">Marketing Programs <span class="hint">what advisors can select when logging a coupon on the intake page</span></div>
+          <form id="program-form" style="display:flex; gap:14px; align-items:end; margin-bottom:16px;">
+            <div style="flex:1;"><label>New Program Name</label><input type="text" id="program-name-input" placeholder="e.g. Postcard Mailer Q3"></div>
+            <div><button type="submit" class="btn btn-primary">Add Program</button></div>
+          </form>
+          <div id="program-list"></div>
+          <p style="font-size:12px; color:var(--text-faint); margin-top:14px; line-height:1.5;">
+            Removing a program here takes it out of the advisor dropdown going forward — it won't change or hide any submissions already logged under that name.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Add a Program Expense <span class="hint">what a marketing program cost for a given month — feeds the ROI column on the Dashboard tab</span></div>
           <form id="expense-form" style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:14px; align-items:end;">
             <div><label>Program</label><select id="exp-program"></select></div>
             <div><label>Month</label><input type="month" id="exp-month" required></div>
@@ -312,13 +347,7 @@
           <div class="card-title">Logged Expenses</div>
           <div id="expense-list"></div>
         </div>
-      </div>
 
-      <!-- SETTINGS -->
-      <div class="panel" id="panel-settings">
-        <div class="eyebrow-main">Fixed Operations · Marketing ROI</div>
-        <h1 class="page-title">Settings</h1>
-        <p class="page-sub">Connection info for this page.</p>
         <div class="card">
           <div class="card-title">API</div>
           <p style="font-size:13.5px; color:var(--text-muted); line-height:1.6;">
@@ -343,7 +372,8 @@
 
   let submissions = [];
   let expenses = [];
-  let knownPrograms = new Set(["Grocery Store Receipt","AHM Direct Mailer","TVI MarketPro3 Direct Mailer","Grassroots Marketing"]);
+  let programs = []; // [{id, name}] — the managed list from Settings
+  let knownPrograms = new Set(); // union of managed programs + any legacy names in historical data
   let chartRedemptions, chartProfit;
 
   // No password layer right now — see Settings tab. When IP restriction is
@@ -374,13 +404,16 @@
   // ---------- data ----------
   async function loadAll(){
     try{
-      const [subRes, expRes] = await Promise.all([
+      const [subRes, expRes, progRes] = await Promise.all([
         fetch(`${API_BASE}/api/manager/submissions`, { headers: apiHeaders() }),
         fetch(`${API_BASE}/api/manager/expenses`, { headers: apiHeaders() }),
+        fetch(`${API_BASE}/api/programs`, { headers: apiHeaders() }),
       ]);
-      if(!subRes.ok || !expRes.ok) return false;
+      if(!subRes.ok || !expRes.ok || !progRes.ok) return false;
       submissions = await subRes.json();
       expenses = await expRes.json();
+      programs = await progRes.json();
+      knownPrograms = new Set(programs.map(p=>p.name));
       submissions.forEach(s=>{ if(s.program) knownPrograms.add(s.program); });
       expenses.forEach(e=>{ if(e.program) knownPrograms.add(e.program); });
       renderAll();
@@ -388,6 +421,33 @@
     }catch(err){
       return false;
     }
+  }
+
+  async function addProgram(name){
+    const res = await fetch(`${API_BASE}/api/manager/programs`, {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ name })
+    });
+    if(!res.ok){
+      const body = await res.json().catch(()=>({}));
+      throw new Error(body.error || 'add failed');
+    }
+    return res.json();
+  }
+  async function renameProgram(id, name){
+    const res = await fetch(`${API_BASE}/api/manager/programs/${id}`, {
+      method: 'PATCH', headers: apiHeaders(), body: JSON.stringify({ name })
+    });
+    if(!res.ok){
+      const body = await res.json().catch(()=>({}));
+      throw new Error(body.error || 'rename failed');
+    }
+    return res.json();
+  }
+  async function deleteProgram(id){
+    const res = await fetch(`${API_BASE}/api/manager/programs/${id}`, {
+      method: 'DELETE', headers: apiHeaders()
+    });
+    if(!res.ok) throw new Error('delete failed');
   }
 
   async function updateSubmission(id, patch){
@@ -412,10 +472,10 @@
   }
 
   // ---------- filters ----------
-  function getFilteredSubmissions(){
-    const month = document.getElementById('f-month').value;
-    const program = document.getElementById('f-program').value;
-    const status = document.getElementById('f-status').value;
+  function filterBy(prefix){
+    const month = document.getElementById(`${prefix}-month`).value;
+    const program = document.getElementById(`${prefix}-program`).value;
+    const status = document.getElementById(`${prefix}-status`).value;
     return submissions.filter(s=>{
       if(month !== 'all' && monthKey(s.created_at) !== month) return false;
       if(program !== 'all' && s.program !== program) return false;
@@ -424,36 +484,43 @@
       return true;
     });
   }
+  function getDashboardFiltered(){ return filterBy('d'); }
+  function getSubmissionsFiltered(){ return filterBy('s'); }
 
   function populateFilterOptions(){
-    const monthSel = document.getElementById('f-month');
-    const progSel = document.getElementById('f-program');
-    const expProgSel = document.getElementById('exp-program');
-
     const months = new Set(submissions.map(s=>monthKey(s.created_at)));
     const monthsSorted = [...months].sort().reverse();
-    const curMonthVal = monthSel.value;
-    monthSel.innerHTML = '<option value="all">All time</option>' + monthsSorted.map(m=>`<option value="${m}">${m}</option>`).join('');
-    if([...monthSel.options].some(o=>o.value===curMonthVal)) monthSel.value = curMonthVal;
-
     const progsSorted = [...knownPrograms].sort();
-    const curProgVal = progSel.value;
-    progSel.innerHTML = '<option value="all">All programs</option>' + progsSorted.map(p=>`<option value="${p}">${p}</option>`).join('');
-    if([...progSel.options].some(o=>o.value===curProgVal)) progSel.value = curProgVal;
 
-    expProgSel.innerHTML = progsSorted.map(p=>`<option value="${p}">${p}</option>`).join('');
+    ['d-month','s-month'].forEach(id=>{
+      const sel = document.getElementById(id);
+      const cur = sel.value;
+      sel.innerHTML = '<option value="all">All time</option>' + monthsSorted.map(m=>`<option value="${m}">${m}</option>`).join('');
+      if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+    });
+
+    ['d-program','s-program'].forEach(id=>{
+      const sel = document.getElementById(id);
+      const cur = sel.value;
+      sel.innerHTML = '<option value="all">All programs</option>' + progsSorted.map(p=>`<option value="${p}">${p}</option>`).join('');
+      if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+    });
+
+    document.getElementById('exp-program').innerHTML = progsSorted.map(p=>`<option value="${p}">${p}</option>`).join('');
   }
 
   // ---------- render ----------
   function renderAll(){
     populateFilterOptions();
-    const filtered = getFilteredSubmissions();
-    renderStats(filtered);
-    renderProgramTable(filtered);
-    renderSubmissionsList(filtered);
+    const dFiltered = getDashboardFiltered();
+    const sFiltered = getSubmissionsFiltered();
+    renderStats(dFiltered);
+    renderProgramTable(dFiltered);
+    renderSubmissionsList(sFiltered);
+    renderProgramList();
     renderExpenseList();
     try{
-      renderCharts(filtered);
+      renderCharts(dFiltered);
     }catch(err){
       console.error('Chart rendering failed (rest of the dashboard is unaffected):', err);
       const chartsCard = document.getElementById('chart-redemptions')?.closest('.card');
@@ -484,7 +551,7 @@
   }
 
   function renderProgramTable(filtered){
-    const monthFilter = document.getElementById('f-month').value;
+    const monthFilter = document.getElementById('d-month').value;
     const tbody = document.querySelector('#program-table tbody');
     const programs = [...knownPrograms].sort();
 
@@ -635,6 +702,53 @@
     });
   };
 
+  function renderProgramList(){
+    const wrap = document.getElementById('program-list');
+    if(programs.length===0){
+      wrap.innerHTML = `<div class="empty-state">No programs yet — add the first one above.</div>`;
+      return;
+    }
+    const sorted = [...programs].sort((a,b)=> a.name.localeCompare(b.name));
+    wrap.innerHTML = `<table>
+      <thead><tr><th>Program</th><th></th></tr></thead>
+      <tbody>
+        ${sorted.map(p=>`<tr data-id="${p.id}">
+          <td class="prog-name-cell">${p.name}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            <button class="btn btn-ghost rename-prog-btn" data-id="${p.id}" data-name="${p.name.replace(/"/g,'&quot;')}" style="padding:6px 12px; font-size:11.5px;">Rename</button>
+            <button class="btn btn-ghost del-prog-btn" data-id="${p.id}" data-name="${p.name.replace(/"/g,'&quot;')}" style="padding:6px 12px; font-size:11.5px;">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+    wrap.querySelectorAll('.rename-prog-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const newName = window.prompt('Rename program to:', btn.dataset.name);
+        if(!newName || !newName.trim() || newName.trim() === btn.dataset.name) return;
+        try{
+          await renameProgram(btn.dataset.id, newName.trim());
+          showToast('Program renamed.');
+          await loadAll();
+        }catch(err){
+          showToast(err.message || 'Could not rename — check your connection.');
+        }
+      });
+    });
+    wrap.querySelectorAll('.del-prog-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!window.confirm(`Remove "${btn.dataset.name}" from the advisor dropdown? Past submissions under this name are unaffected.`)) return;
+        try{
+          await deleteProgram(btn.dataset.id);
+          showToast('Program removed.');
+          await loadAll();
+        }catch(err){
+          showToast('Could not delete — check your connection.');
+        }
+      });
+    });
+  }
+
   function renderExpenseList(){
     const wrap = document.getElementById('expense-list');
     if(expenses.length===0){
@@ -665,17 +779,38 @@
   }
 
   // ---------- events ----------
-  ['f-month','f-program','f-status'].forEach(id=>{
+  ['d-month','d-program','d-status'].forEach(id=>{
     document.getElementById(id).addEventListener('change', ()=>{
-      const filtered = getFilteredSubmissions();
+      const filtered = getDashboardFiltered();
       renderStats(filtered);
       renderProgramTable(filtered);
-      renderSubmissionsList(filtered);
       try{ renderCharts(filtered); }catch(err){ console.error('Chart rendering failed:', err); }
     });
   });
 
-  document.getElementById('refresh-data').addEventListener('click', loadAll);
+  ['s-month','s-program','s-status'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', ()=>{
+      renderSubmissionsList(getSubmissionsFiltered());
+    });
+  });
+
+  document.getElementById('d-refresh').addEventListener('click', loadAll);
+  document.getElementById('s-refresh').addEventListener('click', loadAll);
+
+  document.getElementById('program-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const input = document.getElementById('program-name-input');
+    const name = input.value.trim();
+    if(!name) return;
+    try{
+      await addProgram(name);
+      showToast('Program added.');
+      input.value='';
+      await loadAll();
+    }catch(err){
+      showToast(err.message || 'Could not save — check your connection.');
+    }
+  });
 
   document.getElementById('expense-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
@@ -694,7 +829,7 @@
   });
 
   document.getElementById('export-csv').addEventListener('click', ()=>{
-    const filtered = getFilteredSubmissions();
+    const filtered = getSubmissionsFiltered();
     const headers = ['Date','RO Number','Program','Customer Type','Advisor','Oil Change Price','Coupon Amount','Auth Number','Reviewed','RO Total','Gross Profit','Transaction Type','Notes'];
     const rows = filtered.map(s=>[
       s.created_at, s.ro_number, s.program, s.customer_type, s.advisor_name||'',
